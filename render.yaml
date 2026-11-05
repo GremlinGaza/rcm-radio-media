@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: rcm-radio-media
+    runtime: docker
+    plan: free
+    healthCheckPath: /health.php
+    envVars:
+      - key: RCM_DB_HOST
+        sync: false
+      - key: RCM_DB_PORT
+        value: "3306"
+      - key: RCM_DB_NAME
+        sync: false
+      - key: RCM_DB_USER
+        sync: false
+      - key: RCM_DB_PASSWORD
+        sync: false
+      - key: RCM_FACEBOOK_PAGE_ID
+        value: "965017853369265"
+      - key: RCM_GMAIL_ADDRESS
+        value: operations@rcmradio.co.ke
+      - key: RCM_PUBLIC_SITE_URL
+        sync: false

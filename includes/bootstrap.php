@@ -12,11 +12,34 @@ $configuredPath = getenv('RCM_CONFIG_FILE');
 $configFile = $configuredPath !== false && trim($configuredPath) !== ''
   ? trim($configuredPath)
   : __DIR__ . '/../config.php';
-if (!file_exists($configFile)) {
+if (file_exists($configFile)) {
+  $config = require $configFile;
+} elseif ($configuredPath !== false && trim($configuredPath) !== '') {
   http_response_code(500);
-  exit('Setup required: create a private config.php file with the database credentials, then import database.sql.');
+  exit('Setup required: the configured private database file was not found.');
+} else {
+  $environmentValue = static function (string $key, string $default = ''): string {
+    $value = getenv($key);
+    return $value === false ? $default : trim($value);
+  };
+  $config = [
+    'db_host' => $environmentValue('RCM_DB_HOST'),
+    'db_port' => $environmentValue('RCM_DB_PORT', '3306'),
+    'db_name' => $environmentValue('RCM_DB_NAME'),
+    'db_user' => $environmentValue('RCM_DB_USER'),
+    'db_pass' => $environmentValue('RCM_DB_PASSWORD'),
+    'setup_token' => $environmentValue('RCM_SETUP_TOKEN'),
+    'facebook_page_id' => $environmentValue('RCM_FACEBOOK_PAGE_ID'),
+    'facebook_page_access_token' => $environmentValue('RCM_FACEBOOK_PAGE_ACCESS_TOKEN'),
+    'gmail_address' => $environmentValue('RCM_GMAIL_ADDRESS'),
+    'gmail_app_password' => $environmentValue('RCM_GMAIL_APP_PASSWORD'),
+    'public_site_url' => $environmentValue('RCM_PUBLIC_SITE_URL'),
+    'email_token_secret' => $environmentValue('RCM_EMAIL_TOKEN_SECRET'),
+    'social_credential_key' => $environmentValue('RCM_SOCIAL_CREDENTIAL_KEY'),
+    'monitor_fingerprint_key' => $environmentValue('RCM_MONITOR_FINGERPRINT_KEY'),
+    'private_upload_dir' => $environmentValue('RCM_PRIVATE_UPLOAD_DIR'),
+  ];
 }
-$config = require $configFile;
 if (!is_array($config) || !isset($config['db_host'], $config['db_name'], $config['db_user'], $config['db_pass'])) {
   http_response_code(500);
   exit('The private database configuration is incomplete.');

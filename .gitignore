@@ -4,6 +4,8 @@
 /rcm-radio-media.zip
 /database-content.sql
 /setup_admin.php
+.env
+.env.*
 
 # Local editor and operating-system files
 .vscode/

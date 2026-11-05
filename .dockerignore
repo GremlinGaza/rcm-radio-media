@@ -1,0 +1,12 @@
+.git
+.github
+.vscode
+.idea
+config.php
+.env
+.env.*
+htdocs
+database-content.sql
+rcm-radio-media*.zip
+setup_admin.php
+*.log

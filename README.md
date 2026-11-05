@@ -84,6 +84,25 @@ The XAMPP instance is for local development and must not be exposed directly to 
 11. Add `RCM_MONITOR_FINGERPRINT_KEY` as a private random server environment variable to enable credential-change detection. Generate a long random value and keep it stable; the monitor stores keyed fingerprints only and never displays credential values. Without it, the dashboard reports configuration presence but cannot verify value changes.
 12. Configure cPanel Cron to run `php /home/CPANELUSER/public_html/scripts/sync-social-platforms.php` daily, using the PHP binary and full paths specified by your host. It syncs social/RSS content into admin review queues and sends digests only for approved, published content to confirmed subscribers. The admin dashboard records the last run but cannot create or verify the cPanel Cron entry itself.
 
+## Deploy on Render from GitHub
+The repository includes a Dockerfile and Render Blueprint. In Render, choose **New → Blueprint**, connect `GremlinGaza/rcm-radio-media`, and deploy the `render.yaml` blueprint. Render builds the PHP 8.3 Apache image and deploys the `main` branch. After the first setup, pushing commits to `main` triggers a redeploy.
+
+Before deploying, prepare a MySQL/MariaDB database that permits connections from Render, import `database.sql`, and run the four migrations in step 6 above using a PHP CLI that can reach that database. The current InfinityFree database may reject connections from external hosts; if it does, use a MySQL host that allows remote connections. Render does not supply a MySQL database, and its managed PostgreSQL database cannot be used by this MySQL/PDO application without a database migration.
+
+The Blueprint prompts for `RCM_DB_HOST`, `RCM_DB_NAME`, `RCM_DB_USER`, `RCM_DB_PASSWORD`, and `RCM_PUBLIC_SITE_URL`. Enter the exact remote MySQL connection values and the final public HTTPS URL in Render's environment settings; never put database credentials in GitHub or `render.yaml`. The Page ID and operations sender address are configured as non-secret defaults. Add optional `RCM_FACEBOOK_PAGE_ACCESS_TOKEN`, `RCM_GMAIL_APP_PASSWORD`, `RCM_EMAIL_TOKEN_SECRET`, `RCM_SOCIAL_CREDENTIAL_KEY`, and `RCM_MONITOR_FINGERPRINT_KEY` as Render environment secrets only when enabling those integrations. Facebook feed sync requires a valid Page access token. Gmail delivery requires a Google Workspace App Password and outbound SMTP access.
+
+Create the first admin with `scripts/create-admin.php` through an available PHP CLI/shell after the database migrations are complete. Configure a daily Render Cron Job running `php /var/www/html/scripts/sync-social-platforms.php` if your Render plan supports Cron Jobs; this job refreshes feeds and sends the existing daily digests. The included free web service does not provide durable local file storage, so partner-media uploads will not survive service replacement unless a persistent storage solution is added. Configure `RCM_PRIVATE_UPLOAD_DIR` accordingly before enabling uploads.
+
+The deployment health check is `/health.php` and verifies that the application can connect to MySQL. A failed check usually means the database host, credentials, imported schema, or external database access is not ready.
+
+To push a new version from PowerShell after connecting the repository:
+
+```powershell
+git add .
+git commit -m "Describe the update"
+git push origin main
+```
+
 The bundle's `database-content.sql` contains public site content (programs, public news/headlines, social links and public post links) exported from the local database. It excludes admin accounts, contact messages, email subscribers, database credentials, and encrypted API tokens. Import it after `database.sql` if you want to carry the current local content to the live site. Treat any later database export as private because it may contain subscriber or contact information.
 
 The local admin password was disclosed during setup; it must not be reused on the public host. Before going live, change/rotate any reused passwords and keep cPanel, database and email secrets private.

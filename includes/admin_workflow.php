@@ -147,7 +147,11 @@ function workflow_track_credentials(PDO $pdo): array {
     fingerprint=VALUES(fingerprint),is_configured=VALUES(is_configured)");
   foreach ($labels as $key => $label) {
     $value = getenv($key);
-    $value = $value === false ? '' : trim($value);
+    if ($value === false || trim($value) === '') {
+      $configKey = strtolower(substr($key, 4));
+      $value = $GLOBALS['config'][$configKey] ?? '';
+    }
+    $value = trim((string)$value);
     $configured = $value !== '';
     $fingerprint = $monitorKey !== '' && $configured ? hash_hmac('sha256', $value, $monitorKey) : null;
     $upsert->execute([$key, $fingerprint, $configured ? 1 : 0]);
