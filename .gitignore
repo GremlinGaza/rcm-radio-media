@@ -1,0 +1,15 @@
+/config.php
+/htdocs/
+/rcm-radio-media-public-deploy.zip
+/rcm-radio-media.zip
+/database-content.sql
+/setup_admin.php
+
+# Local editor and operating-system files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+
+# Runtime-generated data
+*.log
