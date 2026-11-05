@@ -5,6 +5,7 @@ return [
   'db_name' => 'rcm_radio_media',
   'db_user' => 'root',
   'db_pass' => '',
+  'facebook_page_id' => '',
   // Generate a long random token for one-time admin creation.
   'setup_token' => 'CHANGE-THIS-TO-A-LONG-RANDOM-SECRET',
 ];
