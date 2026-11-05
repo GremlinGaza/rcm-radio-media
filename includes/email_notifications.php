@@ -21,7 +21,9 @@ function ensure_email_subscription_schema(PDO $pdo): void {
 
 function email_notification_env(string $key): string {
   $value = getenv($key);
-  return $value === false ? '' : trim($value);
+  if ($value !== false && trim($value) !== '') return trim($value);
+  $configKey = strtolower(substr($key, 4));
+  return trim((string)($GLOBALS['config'][$configKey] ?? ''));
 }
 
 function email_notification_site_url(): string {

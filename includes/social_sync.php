@@ -29,7 +29,9 @@ function ensure_social_sync_schema(PDO $pdo): void {
 
 function social_sync_env(string $key): string {
   $value = getenv($key);
-  return $value === false ? '' : trim($value);
+  if ($value !== false && trim($value) !== '') return trim($value);
+  $configKey = strtolower(substr($key, 4));
+  return trim((string)($GLOBALS['config'][$configKey] ?? ''));
 }
 
 function social_sync_profiles(PDO $pdo): array {
@@ -49,7 +51,6 @@ function social_sync_channel_id(PDO $pdo): string {
 
 function social_sync_page_id(PDO $pdo): string {
   $configured = social_sync_env('RCM_FACEBOOK_PAGE_ID');
-  if ($configured === '') $configured = trim((string)($GLOBALS['config']['facebook_page_id'] ?? ''));
   if ($configured !== '') return $configured;
   $profiles = social_sync_profiles($pdo);
   return preg_match('~(?:^|[-/])(\d{10,})(?:[/?#]|$)~', $profiles['Facebook'], $match) ? $match[1] : '';
