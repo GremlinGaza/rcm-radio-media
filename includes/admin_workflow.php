@@ -139,7 +139,10 @@ function workflow_track_credentials(PDO $pdo): array {
     'RCM_PUBLIC_SITE_URL' => 'Public site URL',
   ];
   $monitorKey = getenv('RCM_MONITOR_FINGERPRINT_KEY');
-  $monitorKey = $monitorKey === false ? '' : trim($monitorKey);
+  if ($monitorKey === false || trim($monitorKey) === '') {
+    $monitorKey = $GLOBALS['config']['monitor_fingerprint_key'] ?? '';
+  }
+  $monitorKey = trim((string)$monitorKey);
   if (strlen($monitorKey) < 32) $monitorKey = '';
   $upsert = $pdo->prepare("INSERT INTO workflow_credential_monitor (credential_name,fingerprint,is_configured,last_changed_at)
     VALUES (?,?,?,NOW()) ON DUPLICATE KEY UPDATE
@@ -214,6 +217,9 @@ function workflow_last_job_runs(PDO $pdo): array {
 
 function workflow_private_upload_dir(): string {
   $configured = getenv('RCM_PRIVATE_UPLOAD_DIR');
+  if ($configured === false || trim($configured) === '') {
+    $configured = $GLOBALS['config']['private_upload_dir'] ?? '';
+  }
   $directory = $configured !== false && trim($configured) !== ''
     ? rtrim(trim($configured), '\\/')
     : dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'rcm-private' . DIRECTORY_SEPARATOR . 'partner-media';

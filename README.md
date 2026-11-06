@@ -71,23 +71,39 @@ The concise listener/admin workflow is in [RCM-User-Guide.pdf](./RCM-User-Guide.
 ## Public deployment (cPanel)
 The XAMPP instance is for local development and must not be exposed directly to the internet. Deploy the site to a supported cPanel host instead. Use PHP 8.2 or newer with `pdo_mysql`, `curl`, `openssl`, `SimpleXML`, `fileinfo` and `mbstring`; enable HTTPS/AutoSSL before opening the site to visitors. No Composer packages are needed.
 
-1. In cPanel, create a MySQL database and a dedicated database user; grant that user only the privileges for this site's database. Note the complete prefixed database name/user and the database host shown by cPanel.
-2. Select the new database in phpMyAdmin and import `database.sql`. It creates the tables and starter content within the currently selected database; it does not attempt to create a database or user.
-3. Upload the production ZIP to the domain's document root (commonly `public_html`) and extract it there. Do not upload `config.php`, `setup_admin.php`, local backups, or any secret file. Keep `.htaccess` in the document root.
-4. Import the included `database-content.sql` into the same selected database to copy the current public programs, stories, social links and posts. Delete this SQL file from `public_html` after import; `.htaccess` blocks it while present.
-5. Create `config.php` **outside** the document root (for example `/home/CPANELUSER/rcm-private/config.php`) using `config.example.php` as a template. Fill in the cPanel database credentials and set a new random `setup_token`. Configure the server environment values `RCM_CONFIG_FILE=/home/CPANELUSER/rcm-private/config.php` and `RCM_PUBLIC_SITE_URL=https://rcmradiomedia.co.ke` in the cPanel PHP/application environment. If the host requires Apache directives instead, ask support whether `SetEnv` is supported for PHP and use `SetEnv RCM_CONFIG_FILE /home/CPANELUSER/rcm-private/config.php` and `SetEnv RCM_PUBLIC_SITE_URL https://rcmradiomedia.co.ke` in `.htaccess`. Do not put database credentials in a public form or commit them.
-6. In cPanel Terminal, run the four schema migrations from the site's root: `php scripts/migrate-social-sync.php`, `php scripts/migrate-news-feeds.php`, `php scripts/migrate-email-notifications.php`, and `php scripts/migrate-admin-workflow.php`. These are safe to rerun.
-7. Create an admin over the cPanel Terminal without putting the password in the command history. In Bash, run `read -s -p "New admin password: " RCM_ADMIN_PASSWORD; echo; export RCM_ADMIN_PASSWORD; php scripts/create-admin.php "Mike Mwashuke"; unset RCM_ADMIN_PASSWORD`. Use a new, unique password (not the password previously used on local XAMPP). The script is CLI-only, stores a password hash, and refuses to replace an existing account.
-8. Enable AutoSSL for `rcmradiomedia.co.ke` and `www.rcmradiomedia.co.ke`, verify DNS points to the hosting account, and test `https://rcmradiomedia.co.ke/` and `https://rcmradiomedia.co.ke/admin/login.php`. Enforce HTTPS through the hosting provider after the certificate is active.
-9. Configure only the private server credentials needed for optional services (social APIs and Gmail notifications) in cPanel's supported environment-variable settings. The public website and admin monitor work without Facebook/TikTok API credentials; those platform sync rows will correctly report not configured until credentials are added. Never copy secrets from the local XAMPP configuration.
-10. Create a private, writable upload folder outside `public_html` (the default is `/home/CPANELUSER/rcm-private/partner-media`; set `RCM_PRIVATE_UPLOAD_DIR` if your host uses a different path). The admin accepts JPEG, PNG, WebP and PDF files up to 8 MB, verifies MIME types, and keeps uploads private until an admin approves them.
-11. Add `RCM_MONITOR_FINGERPRINT_KEY` as a private random server environment variable to enable credential-change detection. Generate a long random value and keep it stable; the monitor stores keyed fingerprints only and never displays credential values. Without it, the dashboard reports configuration presence but cannot verify value changes.
-12. Configure cPanel Cron to run `php /home/CPANELUSER/public_html/scripts/sync-social-platforms.php` daily, using the PHP binary and full paths specified by your host. It syncs social/RSS content into admin review queues and sends digests only for approved, published content to confirmed subscribers. The admin dashboard records the last run but cannot create or verify the cPanel Cron entry itself.
+1. In cPanel, create a MySQL database and a dedicated database user; grant that user only the privileges for this site's database. Note the complete prefixed database name/user and database host shown by cPanel.
+2. Select the new database in phpMyAdmin and import `database.sql`. It creates the tables and starter content; it does not create a database or user.
+3. Upload the current `rcm-radio-media-public-deploy.zip` to the domain's document root (commonly `public_html`) and extract it there. Keep `.htaccess` in that directory. The package excludes credentials, admin setup endpoints, and local database-content exports.
+4. Create `/home/CPANELUSER/config.php`, one level above `public_html`, by copying `config.example.php` from the extracted site and editing the copy with File Manager. Use the database values from cPanel, set `public_site_url` to the final `https://` site address, and replace the setup token and signing/fingerprint keys with long random values. The application automatically checks for this private config path; no PHP environment-variable feature or `SetEnv` directive is required. If the document root is not `/home/CPANELUSER/public_html`, configure `RCM_CONFIG_FILE` to point to the private file using the host's supported PHP environment settings. Never put credentials in the public document root or Git.
+5. In cPanel Terminal, change to the site document root and run `php -v` to confirm that the CLI PHP version matches the version selected for the domain in MultiPHP Manager. If needed, use the host's matching binary, such as `/usr/local/bin/ea-php82`. Run the four safe-to-rerun migrations:
+
+   ```sh
+   php scripts/migrate-social-sync.php
+   php scripts/migrate-news-feeds.php
+   php scripts/migrate-email-notifications.php
+   php scripts/migrate-admin-workflow.php
+   ```
+
+6. Create the first admin from cPanel Terminal without putting its password in command history:
+
+   ```sh
+   read -s -p "New admin password: " RCM_ADMIN_PASSWORD; echo
+   export RCM_ADMIN_PASSWORD
+   php scripts/create-admin.php "RCM Admin"
+   unset RCM_ADMIN_PASSWORD
+   ```
+
+   Substitute the account name if desired. Use a unique password of at least 12 characters. The CLI script refuses to replace an existing account. If cPanel Terminal is unavailable, ask the host to enable it rather than exposing a temporary public setup script.
+7. Create `/home/CPANELUSER/rcm-private/partner-media` and ensure the PHP account can write to it. This is the default private upload location; to use a different path, set `private_upload_dir` in the private config. Uploads accept JPEG, PNG, WebP, and PDF files up to 8 MB.
+8. Enable AutoSSL for the domain and any `www` alias, verify DNS points to the hosting account, enable HTTPS redirect only after the certificate is active, then test the homepage, `/health.php`, contact/news/program/partner sections, subscription confirmation, and `/admin/login.php`.
+9. Configure only integrations you intend to use in the private `config.php`: Facebook Page ID and access token, YouTube channel ID, TikTok profile and API credentials, Gmail address and App Password, and a public HTTPS site URL. External APIs and SMTP require outbound access from the host; otherwise their sync/delivery features will report a failure rather than affect core site pages.
+10. Add a private `monitor_fingerprint_key` (at least 32 characters) to enable credential-change tracking. Keep it stable; the monitor stores keyed fingerprints only and does not display credential values.
+11. Configure cPanel Cron to run the social/news sync daily, using the PHP binary and absolute paths required by your host (for example `php /home/CPANELUSER/public_html/scripts/sync-social-platforms.php`). It refreshes feeds and sends digests only for approved, published content to confirmed subscribers. Verify the cron result in the admin dashboard.
 
 ## Deploy on Render from GitHub
 The repository includes a Dockerfile and Render Blueprint. In Render, choose **New → Blueprint**, connect `GremlinGaza/rcm-radio-media`, and deploy the `render.yaml` blueprint. Render builds the PHP 8.3 Apache image and deploys the `main` branch. After the first setup, pushing commits to `main` triggers a redeploy.
 
-Before deploying, prepare a MySQL/MariaDB database that permits connections from Render, import `database.sql`, and run the four migrations in step 6 above using a PHP CLI that can reach that database. The current InfinityFree database may reject connections from external hosts; if it does, use a MySQL host that allows remote connections. Render does not supply a MySQL database, and its managed PostgreSQL database cannot be used by this MySQL/PDO application without a database migration.
+Before deploying, prepare a MySQL/MariaDB database that permits connections from Render, import `database.sql`, and run the four cPanel migration commands listed above using a PHP CLI that can reach that database. The current InfinityFree database may reject connections from external hosts; if it does, use a MySQL host that allows remote connections. Render does not supply a MySQL database, and its managed PostgreSQL database cannot be used by this MySQL/PDO application without a database migration.
 
 The Blueprint prompts for `RCM_DB_HOST`, `RCM_DB_NAME`, `RCM_DB_USER`, `RCM_DB_PASSWORD`, and `RCM_PUBLIC_SITE_URL`. Enter the exact remote MySQL connection values and the final public HTTPS URL in Render's environment settings; never put database credentials in GitHub or `render.yaml`. The Page ID and operations sender address are configured as non-secret defaults. Add optional `RCM_FACEBOOK_PAGE_ACCESS_TOKEN`, `RCM_GMAIL_APP_PASSWORD`, `RCM_EMAIL_TOKEN_SECRET`, `RCM_SOCIAL_CREDENTIAL_KEY`, and `RCM_MONITOR_FINGERPRINT_KEY` as Render environment secrets only when enabling those integrations. Facebook feed sync requires a valid Page access token. Gmail delivery requires a Google Workspace App Password and outbound SMTP access.
 
@@ -103,7 +119,7 @@ git commit -m "Describe the update"
 git push origin main
 ```
 
-The bundle's `database-content.sql` contains public site content (programs, public news/headlines, social links and public post links) exported from the local database. It excludes admin accounts, contact messages, email subscribers, database credentials, and encrypted API tokens. Import it after `database.sql` if you want to carry the current local content to the live site. Treat any later database export as private because it may contain subscriber or contact information.
+The optional local `database-content.sql` export contains public programs, news/headlines, social links and post links. It is not included in GitHub or the cPanel deployment ZIP; import it after `database.sql` only if you separately have that export and want to carry over those records. Treat any later database export as private because it may contain subscriber or contact information.
 
 The local admin password was disclosed during setup; it must not be reused on the public host. Before going live, change/rotate any reused passwords and keep cPanel, database and email secrets private.
 
